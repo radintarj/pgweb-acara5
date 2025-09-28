@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Flores Timur</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <style>
+        html,
+        body {
+            margin: 0;
+        }
+
+        #map {
+            width: 100%;
+            height: 100vh;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="map"></div>
+
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+    <script>
+        // Inisialisasi peta
+        var map = L.map("map").setView([-6.1753924, 106.8271528], 12);
+
+        // Basemap
+        var basemap = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        });
+        basemap.addTo(map);
+
+        // ================== Toponimi (Point) ==================
+        var toponimi = L.geoJSON(null, {
+            pointToLayer: function (feature, latlng) {
+                return L.marker(latlng, {
+                    icon: L.icon({
+                        iconUrl: "images/home_marker.png",  // ganti dengan path icon marker
+                        iconSize: [40, 40],
+                        iconAnchor: [16, 32],
+                        popupAnchor: [0, -32],
+                        tooltipAnchor: [16, -16]
+                    })
+                });
+            },
+            onEachFeature: function (feature, layer) {
+                var popup_content =
+                    "Nama: " + feature.properties.TOPONIMI + "<br>" +
+                    "Koordinat: " + feature.geometry.coordinates[1] + ", " +
+                    feature.geometry.coordinates[0];
+
+                layer.bindPopup(popup_content);
+                layer.bindTooltip(feature.properties.TOPONIMI, { direction: "right" });
+            }
+        });
+        $.getJSON("data/toponimi.geojson", function (data) {
+            toponimi.addData(data);
+            map.addLayer(toponimi);
+        });
+
+        // ================== Jalan (Polyline Merah) ==================
+        map.createPane('paneJalan');
+        map.getPane("paneJalan").style.zIndex = 401;
+
+        var jalan = L.geoJSON(null, {
+            pane: 'paneJalan',
+            style: function (feature) {
+                return { color: "red", opacity: 1, weight: 2 };
+            },
+            onEachFeature: function (feature, layer) {
+                layer.bindTooltip(feature.properties.NAMA_UNSUR, {
+                    direction: "auto",
+                    sticky: true
+                });
+            }
+        });
+        $.getJSON("data/jalan.geojson", function (data) {
+            jalan.addData(data);
+            map.addLayer(jalan);
+        });
+
+        // ================== Sungai (Polyline Biru) ==================
+        map.createPane('paneSungai');
+        map.getPane("paneSungai").style.zIndex = 402;
+
+        var sungai = L.geoJSON(null, {
+            pane: 'paneSungai',
+            style: function (feature) {
+                return { color: "blue", opacity: 1, weight: 2 };
+            },
+            onEachFeature: function (feature, layer) {
+                layer.bindTooltip(feature.properties.LAYER, {
+                    direction: "auto",
+                    sticky: true
+                });
+            }
+        });
+        $.getJSON("data/sungai.geojson", function (data) {
+            sungai.addData(data);
+            map.addLayer(sungai);
+        });
+
+        // ================== Batas Kecamatan (Polygon Hijau, Biru, Ungu) ==================
+        map.createPane('paneKecamatan');
+        map.getPane("paneKecamatan").style.zIndex = 301;
+
+        var batas_kecamatan = L.geoJSON(null, {
+            pane: 'paneKecamatan',
+            style: function (feature) {
+                if (feature.properties.Penduduk <= 15000) {
+                    return { color: "black", weight: 1, fillOpacity: 0.7, fillColor: "sage" };
+                }
+                if (feature.properties.Penduduk > 15000 && feature.properties.Penduduk <= 30000) {
+                    return { color: "black", weight: 1, fillOpacity: 0.7, fillColor: "#skyblue" };
+                }
+                if (feature.properties.Penduduk > 30000) {
+                    return { color: "black", weight: 1, fillOpacity: 0.7, fillColor: "beige" };
+                }
+            },
+            onEachFeature: function (feature, layer) {
+                var popup_content =
+                    "Kecamatan: " + feature.properties.WADMKC + "<br>" +
+                    "Jumlah Penduduk: " + feature.properties.Penduduk;
+                layer.bindPopup(popup_content);
+                layer.bindTooltip(feature.properties.WADMKC, { direction: "auto", sticky: true });
+            }
+        });
+        $.getJSON("data/batas_kecamatan.geojson", function (data) {
+            batas_kecamatan.addData(data);
+            map.addLayer(batas_kecamatan);
+        });
+
+        // ================== Batas Desa (Polygon Ungu) ==================
+        map.createPane('paneDesa');
+        map.getPane("paneDesa").style.zIndex = 302;
+
+        var batas_desa = L.geoJSON(null, {
+            pane: 'paneDesa',
+            style: function (feature) {
+                return { color: "black", weight: 1, fillOpacity: 0.6, fillColor: "pink" };
+            },
+            onEachFeature: function (feature, layer) {
+                var popup_content = "Desa: " + feature.properties.WADMKD;
+                layer.bindPopup(popup_content);
+                layer.bindTooltip(feature.properties.WADMKD, { direction: "center", sticky: true });
+            }
+        });
+        $.getJSON("data/batas_desa.geojson", function (data) {
+            batas_desa.addData(data);
+            map.addLayer(batas_desa);
+        });
+
+        // ================== Control Layer ==================
+        var baseMaps = {
+            "OpenStreetMap": basemap
+        };
+        var overlayMaps = {
+            "Toponimi": toponimi,
+            "Jalan": jalan,
+            "Sungai": sungai,
+            "Batas Kecamatan": batas_kecamatan,
+            "Batas Desa": batas_desa
+        };
+
+        L.control.layers(baseMaps, overlayMaps).addTo(map);
+    </script>
+</body>
+</html>
